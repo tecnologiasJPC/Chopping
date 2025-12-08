@@ -1,15 +1,14 @@
+import time
 import tkinter as tk
 import ctypes
 import pyperclip
 import pytesseract
 import pyautogui
 import os
-import datetime
 import glob
+import datetime
 import webbrowser
 from PIL import Image, ImageTk, ImageGrab
-from pyzbar.pyzbar import decode
-from textblob import TextBlob
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
@@ -63,6 +62,7 @@ class RectOverlay:
         self.start_x = self.canvas.canvasx(event.x)
         self.start_y = self.canvas.canvasy(event.y)
         self.rect = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='red', width=2)
+        time.sleep(0.05)
 
     def on_drag(self, event):
         cur_x = self.canvas.canvasx(event.x)
@@ -84,11 +84,15 @@ class RectOverlay:
         right = max(abs_start_x, abs_end_x)
         bottom = max(abs_start_y, abs_end_y)
 
-        part = [left, top, right, bottom]
-        self.section = tuple(part)
+        if right > left and bottom > top:
+            part = [left, top, right, bottom]
+            self.section = tuple(part)
+        else:
+            print("Rectángulo inválido, no se guardó captura.")
         self.close()
 
     def qr_analyze(self):
+        from pyzbar.pyzbar import decode
         try:
             img = Image.open(os.path.join(os.path.dirname(__file__), self.current_name))
             decoded_objects = decode(img)
@@ -105,24 +109,22 @@ class RectOverlay:
             print(f"Error reading QR code: {e}")
             return False
 
-    def text_analyze(self):
+    def text_analyze(self):     # analyze the text found in the image
         img_punt = Image.open(os.path.join(os.path.dirname(__file__), self.current_name))
         text = pytesseract.image_to_string(img_punt, config='--psm 11 --oem 3')
         text = text.replace('\n', ' ').replace('  ', ' ')
         pyperclip.copy(text)
         text = text[:-1]
-
-        #blob = TextBlob(text)
-        #text = str(blob.correct())
-
         self.text_found = text
         print('Text found:', self.text_found)
 
     def close(self, data=None):
         self.overlay.destroy()
+        time.sleep(0.1)
         now = datetime.datetime.now()
         stamp = now.strftime("%Y-%m-%d %H_%M_%S")
         screenshot = ImageGrab.grab(self.section, all_screens=True)
+
         self.current_name = "captures/capture" + stamp + ".png"
         screenshot.save(os.path.join(os.path.dirname(__file__), self.current_name))
 
@@ -132,7 +134,8 @@ class RectOverlay:
             self.text_analyze()
 
         if self.on_close_callback:
-            self.on_close_callback({"Text": self.text_found, "QR": self.qr_found, "Image": self.current_name})
+            self.on_close_callback({"Text": self.text_found, "QR": self.qr_found,
+                                    "Image": self.current_name, "Section": self.section})
 
 
 # this is the main GUI displayed since the beginning
@@ -141,17 +144,18 @@ class MainGUI:
         self.root = tk.Tk()
         self.root.title("Chopping v1.0")
         self.route = os.path.dirname(__file__) + '/captures/'
-        self.root.iconbitmap(os.path.join(os.path.dirname(__file__), 'icon.ico'))
-        self.root.geometry("400x125")
-        self.root.minsize(400, 125)
-        self.root.resizable(False, False)
-
+        self.root.iconbitmap(os.path.join(os.path.dirname(__file__), 'icono.ico'))
+        self.root.geometry("400x125")       # initial size of window
+        self.root.minsize(400, 125)         # fixed size of window
+        self.root.resizable(False, False)   # window is not resizable
         self.frame = tk.Frame(self.root)
         self.frame.pack(pady=10)
 
-        self.button = tk.Button(self.frame, text="Draw", command=self.launch_overlay, width=20, height=2)
+        # button to start selection
+        self.button = tk.Button(self.frame, text="Draw", command=self.launch_overlay, width=20, height=3)
         self.button.pack(side=tk.LEFT)
 
+        # button to access images taken
         img = Image.open(os.path.join(os.path.dirname(__file__), "folder.ico"))
         img = img.resize((49, 49))
         photo = ImageTk.PhotoImage(img)
@@ -159,33 +163,25 @@ class MainGUI:
         self.buttonRoute.image = photo
         self.buttonRoute.pack(side=tk.LEFT)
 
-        img_copy = Image.open(os.path.join(os.path.dirname(__file__), "copyImage.ico"))
-        img_copy = img_copy.resize((49, 49))
-        photo_copy = ImageTk.PhotoImage(img_copy)
-        self.buttonCopyImg = tk.Button(self.frame, image=photo_copy, text="Image", command=self.copy_image)
-        self.buttonCopyImg.image = photo_copy
-        self.buttonCopyImg.pack(side=tk.LEFT)
-
+        # shows the position of cursor on screen
         self.labelCoordinates = tk.Label(self.root, text="")
         self.labelCoordinates.pack()
 
+        # section where captured image is displayed
         self.labelImg = tk.Label(self.root)
 
-        '''try:
-            image = Image.open(os.path.join(os.path.dirname(__file__), 'capture.png'))  # Cambia por tu ruta
-            #image = image.resize((400, 300))  # (Ancho, Alto)
-            capture = ImageTk.PhotoImage(image)
-            self.labelImg = tk.Label(self.root, image=capture)
-            self.labelImg.image = capture
-            #self.labelImg.pack(pady=10)
-        except FileNotFoundError:
-            print("No se encuentra imagen")'''
+        # section that shows the x1, y1, x2, y2 section taken
+        self.textLocation = tk.Entry(self.root, state='readonly', bg="#f0f0f0",
+                                     fg='black', justify="center", relief='flat')
 
-        self.label1 = tk.Label(self.root, text="Select the area to analyze")
-        self.label1.pack()
+        # show the instructions text
+        self.labelInfo = tk.Label(self.root, text="Select the area to analyze")
+        self.labelInfo.pack()
 
+        # author info
         self.author = tk.Label(self.root, text="A software from tecnologiasJPC company")
 
+        # create the text analyzed from the image
         self.frame_text = tk.Frame(self.root)
         # Create the vertical scrollbar
         self.scrollbar = tk.Scrollbar(self.frame_text)
@@ -197,7 +193,7 @@ class MainGUI:
             width=50,
             height=20
         )
-        # Configure the scrollbar to work with the text widget
+        # configure the scrollbar to work with the text widget
         self.scrollbar.config(command=self.text_box.yview)
 
     def update_coords(self):
@@ -212,9 +208,6 @@ class MainGUI:
     def open_location(self):
         os.startfile(self.route)
 
-    def copy_image(self):
-        pass
-
     def show_main(self, data):  # this is called once the selection is done
 
         def open_link(event):
@@ -228,8 +221,8 @@ class MainGUI:
 
         self.root.deiconify()
 
-        if self.label1.cget("text") == "Select the area to analyze":
-            self.label1.pack_forget()
+        if self.labelInfo.cget("text") == "Select the area to analyze":
+            self.labelInfo.pack_forget()
 
         files = glob.glob(os.path.join(self.route, '*.png'))
         most_recent = max(files, key=os.path.getmtime)
@@ -239,7 +232,7 @@ class MainGUI:
             window_width = 400
         else:
             window_width = w
-        window_height = h + 200
+        window_height = h + 300
 
         self.root.geometry(str(window_width) + "x" + str(window_height))
         self.root.minsize(window_width, window_height)
@@ -250,15 +243,21 @@ class MainGUI:
         self.labelImg.image = capture
         self.labelImg.pack(padx=5)
 
-        if self.label1.cget("text") == "Select the area to analyze":
-            self.label1.pack()
+        lugar = "Location " + str(data["Section"])
+        self.textLocation.config(state='normal')
+        self.textLocation.delete(0, tk.END)
+        self.textLocation.insert(0, lugar)
+        self.textLocation.config(state='readonly')
+        self.textLocation.pack(pady=5, padx=10, fill=tk.X)
+
+        if self.labelInfo.cget("text") == "Select the area to analyze":
+            self.labelInfo.pack(anchor='w')
 
         self.author.pack(side=tk.BOTTOM, anchor='e')
 
-        # --- Crear un frame contenedor para Text + Scrollbar ---
-        # self.frame_text = tk.Frame(self.root)
-        self.frame_text.pack(fill=tk.BOTH, expand=True)  # Se expandirá en la parte superior
-        # Mover Text y Scrollbar al frame (no a root)
+        # create a container for Text and Scrollbar
+        self.frame_text.pack(fill=tk.BOTH, expand=True)  # it expands to top
+        # move text and scrollbar to container
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.text_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.text_box.config(state=tk.NORMAL)
@@ -267,9 +266,9 @@ class MainGUI:
         if data:
             message = data["Text"]
             if data["QR"] is None:
-                self.label1.config(text="Text found")
+                self.labelInfo.config(text="Text found")
             else:
-                self.label1.config(text="QR code detected")
+                self.labelInfo.config(text="QR/bar code detected")
 
             if message.startswith(("http://", "https://", "www.")):
                 self.text_box.insert(tk.END, message, ("link", message))
