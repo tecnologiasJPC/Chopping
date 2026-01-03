@@ -1,2 +1,7 @@
 /capture.png
 /captures/
+/.idea/
+/build/
+/dist/
+*.spec
+*.lnk
