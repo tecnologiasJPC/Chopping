@@ -1,5 +1,6 @@
 import time
 import tkinter as tk
+import tkinter.font as tkFont
 import ctypes
 import pyperclip
 import pytesseract
@@ -9,6 +10,7 @@ import glob
 import datetime
 import webbrowser
 from PIL import Image, ImageTk, ImageGrab
+import sys
 
 # it is required to download tesseract
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
@@ -153,7 +155,7 @@ class MainGUI:
         h = int(v * 3)
         comand = str(h) + 'x' + str(v)
 
-        print(f"Window size is {v} x {h}")
+        print(f"Window size is {h} x {v}")
 
         self.root.geometry(comand)       # initial size of window
         self.root.minsize(400, 125)         # fixed size of window
@@ -162,15 +164,19 @@ class MainGUI:
         self.frame.pack(pady=10)
 
         # button to start selection
-        self.button = tk.Button(self.frame, text="Draw", command=self.launch_overlay, width=20, height=3)
+        img_chop = Image.open(os.path.join(os.path.dirname(__file__), "button.png"))
+        img_chop = img_chop.resize((147, 50))
+        chop_button = ImageTk.PhotoImage(img_chop)
+        self.button = tk.Button(self.frame, image=chop_button, text="Draw", command=self.launch_overlay)
+        self.button.image = chop_button
         self.button.pack(side=tk.LEFT)
 
         # button to access images taken
         img = Image.open(os.path.join(os.path.dirname(__file__), "folder.ico"))
-        img = img.resize((49, 49))
-        photo = ImageTk.PhotoImage(img)
-        self.buttonRoute = tk.Button(self.frame, image=photo, text="Folder", command=self.open_location)
-        self.buttonRoute.image = photo
+        img = img.resize((50, 50))
+        folder_button = ImageTk.PhotoImage(img)
+        self.buttonRoute = tk.Button(self.frame, image=folder_button, text="Folder", command=self.open_location)
+        self.buttonRoute.image = folder_button
         self.buttonRoute.pack(side=tk.LEFT)
 
         # shows the position of cursor on screen
@@ -238,6 +244,7 @@ class MainGUI:
         most_recent = max(files, key=os.path.getmtime)
         image = Image.open(most_recent)
         w, h = image.size
+
         if w < 400:
             window_width = 400
         else:
