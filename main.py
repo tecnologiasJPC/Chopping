@@ -1,7 +1,7 @@
 import time
 import tkinter as tk
-import tkinter.font as tkFont
 import ctypes
+import cv2
 import pyperclip
 import pytesseract
 import pyautogui
@@ -95,13 +95,13 @@ class RectOverlay:
         self.close()
 
     def qr_analyze(self):
-        from pyzbar.pyzbar import decode
+        qr_detector = cv2.QRCodeDetector()
         try:
-            img = Image.open(os.path.join(os.path.dirname(__file__), self.current_name))
-            decoded_objects = decode(img)
-            if decoded_objects:
-                self.qr_found = decoded_objects[0].data.decode('utf-8')
-                print('QR detected:', decoded_objects[0].data.decode('utf-8'))
+            img = cv2.imread(os.path.join(os.path.dirname(__file__), self.current_name))
+            q_data, bbox, _ = qr_detector.detectAndDecode(img)
+            if q_data:
+                print(f"QR detectado: {q_data}")
+                self.qr_found = str(q_data)
                 return True
             else:
                 self.qr_found = None
