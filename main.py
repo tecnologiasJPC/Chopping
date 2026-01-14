@@ -243,8 +243,10 @@ class MainGUI:
 
         if data["State"]:
 
-            if self.labelInfo.cget("text") == "Select the area to analyze":
-                self.labelInfo.pack_forget()
+            self.frame_text.pack_forget()  # decoded text hidden
+            self.scrollbar.pack_forget()   # scrollbar hidden
+            self.text_box.pack_forget()  # textbox hidden
+            self.labelInfo.pack_forget()  # info text hidden
 
             files = glob.glob(os.path.join(self.route, '*.png'))
             most_recent = max(files, key=os.path.getmtime)
@@ -270,8 +272,12 @@ class MainGUI:
             self.textLocation.config(state='readonly')
             self.textLocation.pack(pady=5, padx=10, fill=tk.X)
 
-            if self.labelInfo.cget("text") == "Select the area to analyze":
-                self.labelInfo.pack(anchor='w')
+            if data["QR"] is None:
+                self.labelInfo.config(text="Text found")
+                print('Se encontro texto')
+            else:
+                self.labelInfo.config(text="QR/bar code detected")
+            self.labelInfo.pack(anchor='w')
 
             # create a label with creator info
             self.author.pack(side=tk.BOTTOM, anchor='e')
@@ -285,10 +291,6 @@ class MainGUI:
             self.text_box.delete("1.0", tk.END)
 
             message = data["Text"]
-            if data["QR"] is None:
-                self.labelInfo.config(text="Text found")
-            else:
-                self.labelInfo.config(text="QR/bar code detected")
 
             if message.startswith(("http://", "https://", "www.")):
                 self.text_box.insert(tk.END, message, ("link", message))
