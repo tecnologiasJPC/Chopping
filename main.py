@@ -274,7 +274,7 @@ class MainGUI:
 
             if data["QR"] is None:
                 self.labelInfo.config(text="Text found")
-                print('Se encontro texto')
+                print('Text was found')
             else:
                 self.labelInfo.config(text="QR/bar code detected")
             self.labelInfo.pack(anchor='w')
