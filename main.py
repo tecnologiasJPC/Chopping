@@ -58,7 +58,7 @@ class RectOverlay:
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
         # defines the initial values for the required attributes
-        if getattr(sys, 'frozen', False):   # For executable it gets the current route
+        if getattr(sys, 'frozen', False):   # for executable, it gets the current route
             self.main_route = os.path.dirname(sys.executable)
         else:
             self.main_route = os.path.dirname(__file__)   # for development this is the route
@@ -113,7 +113,7 @@ class RectOverlay:
     def qr_analyze(self):
         qr_detector = cv2.QRCodeDetector()
         try:
-            img = cv2.imread(os.path.join(self.main_route, self.current_name))
+            img = cv2.imread(str(os.path.join(self.main_route, self.current_name)))
             q_data, bbox, _ = qr_detector.detectAndDecode(img)
             if q_data:
                 print(f"QR detected: {q_data}")
@@ -163,7 +163,7 @@ class MainGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Chopping v1.2")
-        if getattr(sys, 'frozen', False):   # For executable it gets the current route
+        if getattr(sys, 'frozen', False):   # for executable, it gets the current route
             self.route = os.path.join(os.path.dirname(sys.executable), 'captures')
         else:
             self.route = os.path.dirname(__file__) + '\\captures\\'   # for development this is the route
